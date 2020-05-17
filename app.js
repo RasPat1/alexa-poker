@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Texas Holdem Poker as an Alexa App.
- * Eack player recieves their hand via text and gives their bets out loud
+ * Eack player recieves their hand via text and dictates their actions to Alexa
  * Alexa lays out the community hands, handles turn order, chip counts, etc.
  *
  **/
@@ -10,32 +10,37 @@
  Global Config
  ******************************************************************************/
 
+var inquirer = require('inquirer');
+
 var SUITS = ['clubs', 'diamonds', 'clovers', 'hearts'];
 var VALUES = ['two', 'three', 'four', 'five', 'six', 'seven', 'eight',
               'nine', 'ten', 'jack', 'queen', 'king', 'ace'];
 
 var game = {
+  debugMode: true,
   players: [],
+  playerCount: 0,
   deck: [],
   handNumber: 0,
   communityCards: [],
   potSize: 0,
   buttonPlayerIndex: 0,
   gameOn: true,
-  currentBet: 0
+  currentBet: 0,
+  defaultChipCount: 100
 };
 
 /******************************************************************************
  Initiate GAME!
  ******************************************************************************/
 
-gameLoop();
+gameInitLoop();
 
 /******************************************************************************
  Main Game Loop
  ******************************************************************************/
 
-function gameLoop() {
+function gameInitLoop() {
   // Get player Count
   // Get Player Names
   // Get player phone numbers
@@ -43,12 +48,23 @@ function gameLoop() {
   // Talk about chip counts and turn order
   // Deal cards i.e. text the players
 
-  var playerCount = getPlayerCount();
-  game.players = initPlayers(getTextInfo());
+  var playerCount;
+  var playerInfo;
+
+  if (game.debugMode) {
+    playerInfo = debugInit();
+  } else {
+    playerCount = getPlayerCount();
+    playerInfo = getTextInfo(playerCount);
+  }
+
+  game.players = initPlayers(playerInfo);
   game.deck = createNewDeck();
   game.buttonPlayerIndex = 0;
-  // Call out who has the button.
+  // Debug this should triger the gameLoop when initilization is done
+}
 
+function gameLoop() {
   while(game.gameOn) {
     playHand();
   }
@@ -172,11 +188,11 @@ function initPlayers(playerInfo) {
   return result;
 }
 
-function createNewPlayer(name, phoneNumber, chipCount) {
+function createNewPlayer(name, phoneNumber) {
   return {
     name: name,
     phoneNumber: phoneNumber,
-    chipCount: chipCount,
+    chipCount: game.defaultChipCount,
     currentHand: [],
     inHand: true,
     inGame: true
@@ -226,9 +242,9 @@ function getPlayerCount() {
   return 2;
 }
 
-function getTextInfo() {
+function getTextInfo(playerCount) {
   if (game.debugMode) {
-    return getTextInfoDebug();
+    return getTextInfoDebug(playerCount);
   }
 
   var info = [
@@ -260,14 +276,82 @@ function printDeck(deck) {
   }
 }
 
-function getTextInfoDebug() {
-  // wait for input from user
-  // TODO: Stub
+function debugInit() {
+  var playerSchema = {
+    propeties: {
+      userCount: {
+        description: 'How many people will be playing?'
+      },
+      user: {
+
+      }
+    }
+  }
+
+  prompt.start();
+  var playerCount;
+  var playerInfo = [];
+
+  prompt.get(['playerCount'], function(err, result) {
+    playerCount = result.playerCount;
+    innerAsk(playerCount)
+  });
+
+  return initPlayers(playerInfo);
+}
+
+function innerAsk(playerCount) {
+  var counter = 0;
+  prompt.start();
+  prompt.get(['name', 'phoneNumber']), function(err, result2) {
+    if (playerCount)
+    playerInfo.push({
+      name: result2.name,
+      phoneNumber: result2.phoneNumber
+    });
+
+  }
+}
+
+
+function getTextInfoDebug(playerCount) {
+  // var info = [
+  //   {
+  //     name: 'ras',
+  //     phoneNumber: '7732264075'
+  //   },
+  //   {
+  //     name: 'shur',
+  //     phoneNumber: '123456789'
+  //   }
+  // ];
+
+  var info = [];
+
+  prompt.start();
+
+  for (var i = 0; i < playerCount; i++) {
+    prompt.get(['playerName', 'phoneNumber'], function(err, result) {
+      console.log('  playerName: ' + result.playerName);
+      info.push({
+          name: result.playerName,
+          phoneNumber: result.phoneNumber
+        });
+    });
+  }
+
+  return info;
 }
 
 function getPlayerCountDebug() {
-  // wait for input from user
-  // TODO: Stub
+  prompt.start();
+
+  var result = prompt.get(['playerCount'], function(err, result) {
+    console.log('  playerCount: ' + result.playerCount);
+    return result.playerCount;
+  });
+
+  return result;
 }
 
 /******************************************************************************
